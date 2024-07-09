@@ -6,6 +6,7 @@ function createExcelLoad(e) {
   log_('Running on: ' + now);
 
   var configs = getConfigs_(getOrCreateSheet_(CONFIG_SHEET));
+  var sysConfigs = getSysConfigs_(getOrCreateSheet_(CONFIG_SHEET));
 
   if (!configs.length) {
     log_('No Excel Load configurations found');
@@ -62,9 +63,9 @@ function loadTemplateSI() {
     }
     else {
       var v_delete                  = "No"                    //                   /           /Delete Record
-      var v_DomainCode              = "DBWAUS"                // Supplier Item Keys/           /Domain [Mandatory]
+      var v_DomainCode              = sysConfigs.domain_code  // Supplier Item Keys/           /Domain [Mandatory]
       var v_ItemCode                = sheetData[i][20]        //                   /           /Item [Mandatory]
-      var v_SupplierCode            = "VIS012"                //                   /           /Supplier [Mandatory]
+      var v_SupplierCode            = sysConfigs.supplier     //                   /           /Supplier [Mandatory]
       var v_SupplierItem            = String(sheetData[i][3]) //                   /           /Supplier Item [Mandatory]
       var v_rowData                 = ""                      //                   /           /Row Data (a formula)
       var v_ItemDescription         = ""                      // Main              /           /Description

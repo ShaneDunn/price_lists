@@ -94,6 +94,45 @@ function getConfigs_(sheet) {
 }
 
 /**
+ * Returns an array of config objects. This reads the config sheet
+ * and tries to extract adjacent column names that end with the same
+ * number. For example Names1 : Values1. Then both columns are used
+ * to define key-value pairs for the coniguration object. The first
+ * column defines the keys, and the adjacent column values define
+ * each keys values.
+ * @param {Sheet} The config sheet from which to read configurations.
+ * @returns {Array} An array of System configuration objects.
+ */
+function getSysConfigs_(sheet) {
+
+  var configs = [], colIndex;
+  // There must be at least 2 columns.
+  if (sheet.getLastColumn() < 2) {
+    return configs;
+  }
+
+  var headerRange = sheet.getRange(1, 1, 1, sheet.getLastColumn());
+  var firstColValue, firstColNum, secondColValue, secondColNum;
+
+  // Test the name of each column to see if it has an adjacent column that ends
+  // in the same number. ie xxxx555 : yyyy555.
+  // Since we check 2 columns at a time, we don't need to check the last column,
+  // as there is no second column to also check. 
+  for (colIndex = 1; colIndex <= headerRange.getNumColumns() - 1; ++colIndex) {
+    firstColValue = headerRange.getCell(1, colIndex).getValue();
+    firstColNum = getTrailingNumber_(firstColValue);
+    
+    secondColValue = headerRange.getCell(1, colIndex + 1).getValue();
+    secondColNum = getTrailingNumber_(secondColValue);
+  
+    if (firstColValue === 'System Configuration' &&	secondColValue === 'Value') {
+      configs.push(getConfigsStartingAtCol_(sheet, colIndex)); 
+    }
+  }
+  return configs;  
+}
+
+/**
  * Returns 1 greater than the largest trailing number in the header row.
  * @param {Object} sheet The sheet in which to find the last number.
  * @returns {Number} The next largest trailing number.
@@ -205,4 +244,5 @@ function loadNewConfiguration(sheet) {
 
 function testConfig() {
   Logger.log(getConfigs_(getOrCreateSheet_(CONFIG_SHEET)));
+  Logger.log(getSysConfigs_(getOrCreateSheet_(CONFIG_SHEET)));
 }
