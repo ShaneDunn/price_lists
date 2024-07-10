@@ -94,13 +94,13 @@ function getConfigs_(sheet) {
 }
 
 /**
- * Returns an array of config objects. This reads the config sheet
- * and tries to extract adjacent column names that end with the same
- * number. For example Names1 : Values1. Then both columns are used
+ * Returns a global configuration object. This reads the configuration
+ * sheet and tries to extract adjacent column names that are named
+ * 'System Configuration' and 'Value'. Then both columns are used
  * to define key-value pairs for the coniguration object. The first
  * column defines the keys, and the adjacent column values define
  * each keys values.
- * @param {Sheet} The config sheet from which to read configurations.
+ * @param {Sheet} The configuration sheet from which to read configurations.
  * @returns {Array} An array of System configuration objects.
  */
 function getSysConfigs_(sheet) {

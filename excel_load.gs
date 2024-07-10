@@ -21,7 +21,19 @@ function createExcelLoad(e) {
       if (config['sheet_name']) {
         try {
           log_('Creating Excel Load for: ' + configName);
-          saveAsCim(config);
+          switch(configName) {
+            case 'supplier_items_VIS000_<YYYYMMDD>':
+              loadTemplateSI(sysConfigs[0],config);
+              break;
+            case 'supplier_pricelist_VIS000_<YYYYMMDD>':
+              loadTemplateSPL(sysConfigs[0],config);
+              break;
+            case 'item_site_costs_VIS000_<YYYYMMDD>':
+              loadTemplateISC(sysConfigs[0],config);
+              break;
+            default:
+              continue;
+          }
         } catch (error) {
           log_('Error executing ' + configName + ': ' + error.message);
         }
@@ -41,21 +53,30 @@ function createExcelLoad(e) {
   }
 }
 
-
 /* =========== Load AUX Template functions =========== */
 
 /* == Supplier Items ================================= */
-function loadTemplateSI() {
-  var startRow = 7;
+function loadTemplateSI(sysConfig,config) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName("Worksheet");
-
-  var sourceRange = sheet.getRange(2, 1, sheet.getLastRow(),47);
+  var sheet = ss.getSheetByName(config.worksheet);
+  var sourceRange = sheet.getRange(2, 1, sheet.getLastRow(),config.wksheet_cols);
   var sheetData = sourceRange.getValues();
-  var data = [];
-
   var numRows = sourceRange.getNumRows();
   //  Logger.log(numRows);
+  var startRow = config.row_start;
+  var data = [];
+  /*
+  var options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+  sysConfigs.quote_date.toLocaleDateString("en-GB");
+  spreadsheet_date
+  expire_date
+  var funcString = '(function(){ return 4+4 })'
+  var result = eval(funcString)()
+  var fn = Function("alert('hello there')");
+  fn();
+  var addition = Function("a", "b", "return a + b;");
+  alert(addition(5, 3)); // shows '8'
+  */
 
   for (var i=0; i < numRows; i++) {
     if (sheetData[i][0] === '' || sheetData[i][20] === '') {
@@ -63,19 +84,19 @@ function loadTemplateSI() {
     }
     else {
       var v_delete                  = "No"                    //                   /           /Delete Record
-      var v_DomainCode              = sysConfigs.domain_code  // Supplier Item Keys/           /Domain [Mandatory]
+      var v_DomainCode              = sysConfig.domain_code   // Supplier Item Keys/           /Domain [Mandatory]
       var v_ItemCode                = sheetData[i][20]        //                   /           /Item [Mandatory]
-      var v_SupplierCode            = sysConfigs.supplier     //                   /           /Supplier [Mandatory]
+      var v_SupplierCode            = sysConfig.supplier      //                   /           /Supplier [Mandatory]
       var v_SupplierItem            = String(sheetData[i][3]) //                   /           /Supplier Item [Mandatory]
       var v_rowData                 = ""                      //                   /           /Row Data (a formula)
       var v_ItemDescription         = ""                      // Main              /           /Description
       var v_SupplierName            = ""                      //                   /           /Name
-      var v_UnitOfMeasure           = "EA"                    //                   /           /Unit of Measure [Mandatory]
+      var v_UnitOfMeasure           = sysConfig.um            //                   /           /Unit of Measure [Mandatory]
       var v_SupplierLeadTime        = "0"                     //                   /           /Supplier Lead Time
       var v_IsUseSOReductionPrice   = "No"                    // Price             /           /Use SO Reduction Price
       var v_SOPriceReduction        = "0.00%"                 //                   /           /SO Price Reduction
-      var v_PriceList               = "VIS012H"               //                   /           /Price List
-      var v_CurrencyCode            = "AUD"                   //                   /           /Currency [Mandatory]
+      var v_PriceList               = sysConfig.price_list    //                   /           /Price List
+      var v_CurrencyCode            = sysConfig.currency_code //                   /           /Currency [Mandatory]
       var v_CurrencyDescription     = ""                      //                   /           /(currencyDescription)
       var v_QuotePrice              = sheetData[i][14]        //                   /Quote Price/Quote Price
       var v_QuoteDate               = "30/06/2024"            //                   /           /Quote Date
@@ -107,9 +128,10 @@ function loadTemplateSI() {
   var newSSFile = DriveApp.getFileById(newSS.getId());
   originalFolder.addFile(newSSFile);
   DriveApp.getRootFolder().removeFile(newSSFile);
-  */
   var ts = SpreadsheetApp.openByUrl("https://docs.google.com/spreadsheets/d/1LQwbbjTt4LmWhZcEyCmELRiP-1c_t5tQVsRuXYh24mw/edit?gid=319957131#gid=319957131");
-  var tsheet = ts.getSheetByName("Data");
+  */
+  var ts = SpreadsheetApp.openByUrl(config.template);
+  var tsheet = ts.getSheetByName(config.sheet_name);
   var targetRange = tsheet.getRange(startRow,1,data.length,data[0].length);
   targetRange.setValues(data);
 
@@ -120,26 +142,24 @@ function loadTemplateSI() {
     fdata[i] = ['=IF(COUNTA(B' + (i+7).toString() + ':E' + (i+7).toString() + ',G' + (i+7).toString() + ':AC' + (i+7).toString() + ')>0,"Supplier Item","")' ];
   }
   // set the column values.
-  tsheet.getRange(7,6,data.length,1).setFormulas(fdata);
-
+  tsheet.getRange(startRow,config.func_col,data.length,1).setFormulas(fdata);
 }
 
 /* == Supplier Price List ============================ */
-function loadTemplateSPL() {
-  var startRow = 8;
+function loadTemplateSPL(sysConfig,config) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName("Worksheet");
-
-  var sourceRange = sheet.getRange(2, 1, sheet.getLastRow(),47);
+  var sheet = ss.getSheetByName(config.worksheet);
+  var sourceRange = sheet.getRange(2, 1, sheet.getLastRow(),config.wksheet_cols);
   var sheetData = sourceRange.getValues();
-  var data = [];
-
   var numRows = sourceRange.getNumRows();
-  var active = true;
-  var v_type = "List Price"
   //  Logger.log(numRows);
 
-    for (var i=0; i < numRows; i++) {
+  var startRow = config.row_start;
+  var active = true;
+  var v_type = sysConfig.list_type;
+  var data = [];
+
+  for (var i=0; i < numRows; i++) {
     /* breqk/end of list condition */
     if (sheetData[i][9] === '') { break; }
     if (sheetData[i][0] !== '' ) {
@@ -180,12 +200,12 @@ function loadTemplateSPL() {
           var v_StockUOMDescription      = ""                       //                         /          /          /(stockUOMDescription)
           var v_SiteCode                 = ""                       //                         /          /          /Site
           var v_SiteDescription          = ""                       //                         /          /          /(siteDescription)
-          var vs_DomainCode              = "DBWAUS"                 //                         /Price List/Price List/(domainCode)
-          var vs_PriceListCode           = "VIS012H"                //                         /          /          /Price List
-          var vs_CurrencyCode            = "AUD"                    //                         /          /          /Currency
+          var vs_DomainCode              = sysConfig.domain_code    //                         /Price List/Price List/(domainCode)
+          var vs_PriceListCode           = sysConfig.price_list     //                         /          /          /Price List
+          var vs_CurrencyCode            = sysConfig.currency_code  //                         /          /          /Currency
           var vs_ProductLine             = ""                       //                         /          /          /Product Line
           var vs_ItemCode                = sheetData[i][20]         //                         /          /          /Item
-          var vs_UnitOfMeasure           = "EA"                     //                         /          /          /Unit of Measure
+          var vs_UnitOfMeasure           = sysConfig.um             //                         /          /          /Unit of Measure
           var vs_StartDate               = "01/07/2024"             //                         /          /          /Start Date
           var v_MinQuantity              = "0"                      //                         /          /          /Minimum Quantity
           var v_PriceAmount              = sheetData[i][16]         //                         /          /          /Amount
@@ -198,29 +218,29 @@ function loadTemplateSPL() {
       }
 
       else {
-        v_DomainCode               = "DBWAUS"                 // Supplier Price List Keys/          /          /Domain
-        v_PriceListCode            = "VIS012H"                //                         /          /          /Price List
-        v_CurrencyCode             = "AUD"                    //                         /          /          /Currency
+        v_DomainCode               = sysConfig.domain_code    // Supplier Price List Keys/          /          /Domain
+        v_PriceListCode            = sysConfig.price_list     //                         /          /          /Price List
+        v_CurrencyCode             = sysConfig.currency_code  //                         /          /          /Currency
         v_ProductLine              = ""                       //                         /          /          /Product Line
         v_ItemCode                 = String(sheetData[i][20]) //                         /          /          /Item
-        v_UnitOfMeasure            = "EA"                     //                         /          /          /Unit of Measure
+        v_UnitOfMeasure            = sysConfig.um             //                         /          /          /Unit of Measure
         v_StartDate                = "01/07/2024"             //                         /          /          /Start Date
         v_rowData                  = ""                       //                         /          /          /Row Data
         v_PriceListDescription     = sheetData[i][4]          // Main                    /          /          /Description
         v_ProdLineDescription      = ""                       //                         /          /          /Product Line Description
         v_ItemDescription          = sheetData[i][21]         //                         /          /          /Item Description
-        v_AmountType               = "List Price"             //                         /          /          /Amount Type
+        v_AmountType               = v_type                   //                         /          /          /Amount Type
         v_CurrencyDescription      = ""                       //                         /          /          /(currencyDescription)
         v_UnitOfMeasureDescription = ""                       //                         /          /          /(unitOfMeasureDescription)
         v_ExpireDate               = "30/06/2025"             //                         /          /          /Expiration Date
         v_IsTemporary              = "No"                     //                         /          /          /Temporary
         v_ItemListPrice            = sheetData[i][16]         //                         /Item      /          /Item Master List Price
-        v_DomainCurrency           = "AUD"                    //                         /          /          /(domainCurrency)
+        v_DomainCurrency           = sysConfig.currency_code  //                         /          /          /(domainCurrency)
         v_ThisLevelGLCost          = sheetData[i][16]         //                         /          /          /Total This Level GL Cost
         v_TotalGLCost              = sheetData[i][16]         //                         /          /          /Total GL Cost
-        v_StockUOM                 = "EA"                     //                         /          /          /Stock UM
+        v_StockUOM                 = sysConfig.um             //                         /          /          /Stock UM
         v_StockUOMDescription      = ""                       //                         /          /          /(stockUOMDescription)
-        v_SiteCode                 = "11"                     //                         /          /          /Site
+        v_SiteCode                 = sysConfig.site           //                         /          /          /Site
         v_SiteDescription          = ""                       //                         /          /          /(siteDescription)
         vs_DomainCode              = ""                       //                         /Price List/Price List/(domainCode)
         vs_PriceListCode           = ""                       //                         /          /          /Price List
@@ -261,12 +281,12 @@ function loadTemplateSPL() {
         v_StockUOMDescription      = ""                       //                         /          /          /(stockUOMDescription)
         v_SiteCode                 = ""                       //                         /          /          /Site
         v_SiteDescription          = ""                       //                         /          /          /(siteDescription)
-        vs_DomainCode              = "DBWAUS"                 //                         /Price List/Price List/(domainCode)
-        vs_PriceListCode           = "VIS012H"                //                         /          /          /Price List
-        vs_CurrencyCode            = "AUD"                    //                         /          /          /Currency
+        vs_DomainCode              = sysConfig.domain_code    //                         /Price List/Price List/(domainCode)
+        vs_PriceListCode           = sysConfig.price_list     //                         /          /          /Price List
+        vs_CurrencyCode            = sysConfig.currency_code  //                         /          /          /Currency
         vs_ProductLine             = ""                       //                         /          /          /Product Line
         vs_ItemCode                = sheetData[i][20]         //                         /          /          /Item
-        vs_UnitOfMeasure           = "EA"                     //                         /          /          /Unit of Measure
+        vs_UnitOfMeasure           = sysConfig.um             //                         /          /          /Unit of Measure
         vs_StartDate               = "01/07/2024"             //                         /          /          /Start Date
         v_MinQuantity              = "0"                      //                         /          /          /Minimum Quantity
         v_PriceAmount              = sheetData[i][16]         //                         /          /          /Amount
@@ -288,9 +308,10 @@ function loadTemplateSPL() {
   https://docs.google.com/spreadsheets/d/1XbWpYrRycjRPUZeQibW9FeVrhzz0fJra5TC5NXxdFy0/edit?gid=1932238525#gid=1932238525
   var targetRange = sheet.getRange(2,48,data.length,36);
   targetRange.setValues(data);
-  */
   var ts = SpreadsheetApp.openByUrl("https://docs.google.com/spreadsheets/d/1XbWpYrRycjRPUZeQibW9FeVrhzz0fJra5TC5NXxdFy0/edit?gid=1932238525#gid=1932238525");
-  var tsheet = ts.getSheetByName("Data");
+  */
+  var ts = SpreadsheetApp.openByUrl(config.template);
+  var tsheet = ts.getSheetByName(config.sheet_name);
   var targetRange = tsheet.getRange(startRow,1,data.length,data[0].length);
   targetRange.setValues(data);
 
@@ -301,12 +322,12 @@ function loadTemplateSPL() {
     fdata[i] = ['=IF(COUNTA(A' + (i+8).toString() + ':G' + (i+8).toString() + ',I' + (i+8).toString() + ':X' + (i+8).toString() + ',AH' + (i+8).toString() + ':AJ' + (i+8).toString() + ')>0,"Supplier Price List",IF(COUNTA(Y' + (i+8).toString() + ':AG' + (i+8).toString() + ')>0,"Price List",""))' ];
   }
   // set the column values.
-  tsheet.getRange(8,8,data.length,1).setFormulas(fdata);
+  tsheet.getRange(startRow,config.func_col,data.length,1).setFormulas(fdata);
 
 }
 
 /* == Item Site Costs ================================ */
-function loadTemplateISC() {
+function loadTemplateISC(sysConfig,config) {
   var startRow = 10;
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName("Worksheet");
@@ -329,10 +350,128 @@ function loadTemplateISC() {
   };
   var targetRange = sheet.getRange(2,112,data.length,26);
   targetRange.setValues(data);
+
+
+
+
+  var startRow = 10;
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Visy Board Worksheet");
+
+  var sourceRange = sheet.getRange(2, 1, sheet.getLastRow(),47);
+  var sheetData = sourceRange.getValues();
+  var data = [];
+  var active = true;
+
+  var numRows = sourceRange.getNumRows();
+  //  Logger.log(numRows);
+
+  for (var i=0; i < numRows; i++) {
+    if (sheetData[i][0] !== '' ) {
+      if (sheetData[i][21] === 'ACTIVE') {
+        active = true;
+      }
+      else {
+        active = false;
+      }
+    }
+    if (sheetData[i][0] === '' ) {
+      continue;
+    }
+    else {
+      if (active) {
+        var v_DomainCode         = "DBWAUS"         // /Item Site Cost Keys/     /Domain
+        var v_CostSet            = "Standard"       // /                   /     /Cost Set
+        var v_ItemCode           = sheetData[i][34] // /                   /     /Item
+        var v_SiteCode           = "11"             // /                   /     /Site
+        var v_rowData            = ""               // /                   /     /Row Data
+        var v_ItemDescription    = ""               // /Main               /     /Description 1
+        var v_UnitOfMeasure      = ""               // /                   /     /Unit of Measure
+        var v_SiteDescription    = ""               // /                   /     /Description
+        var v_CostSetDescription = ""               // /                   /     /Description
+        var v_CostSetType        = ""               // /                   /     /Cost Set Type
+        var v_CostMethod         = ""               // /                   /     /Costing Method
+        var v_CostUpdate         = ""               // /                   /     /Cost Update
+        var v_ThisLevelTotal     = ""               // /                   /     /This Level Total
+        var v_LowerLevelTotal    = ""               // /                   /     /Lower Level Total
+        var v_CostTotal          = ""               // /                   /     /Cost Total
+        var v_DomainCode         = ""               // /Costs              /Costs/Domain
+        var v_CostSet            = ""               // /                   /     /Cost Set
+        var v_ItemCode           = ""               // /                   /     /Item Number
+        var v_SiteCode           = ""               // /                   /     /Site
+        var v_CostElement        = ""               // /                   /     /Element
+        var v_CostCategory       = ""               // /                   /     /Category
+        var v_ThisLevelCost      = ""               // /                   /     /This Level
+        var v_LowerLevelCost     = ""               // /                   /     /Lower Level
+        var v_TotalCost          = ""               // /                   /     /Total
+        var v_IsPrimary          = ""               // /                   /     /Primary
+        var v_IsAddOn            = ""               // /                   /     /Add On
+        data.push([v_DomainCode,v_CostSet,v_ItemCode,v_SiteCode,v_rowData,v_ItemDescription,v_UnitOfMeasure,v_SiteDescription,v_CostSetDescription,v_CostSetType,v_CostMethod,v_CostUpdate,v_ThisLevelTotal,v_LowerLevelTotal,v_CostTotal,v_DomainCode,v_CostSet,v_ItemCode,v_SiteCode,v_CostElement,v_CostCategory,v_ThisLevelCost,v_LowerLevelCost,v_TotalCost,v_IsPrimary,v_IsAddOn]);
+
+        v_DomainCode         = "DBWAUS"         // /Item Site Cost Keys/     /Domain
+        v_CostSet            = "Standard"       // /                   /     /Cost Set
+        v_ItemCode           = sheetData[i][34] // /                   /     /Item
+        v_SiteCode           = "11"             // /                   /     /Site
+        v_rowData            = ""               // /                   /     /Row Data
+        v_ItemDescription    = ""               // /Main               /     /Description 1
+        v_UnitOfMeasure      = ""               // /                   /     /Unit of Measure
+        v_SiteDescription    = ""               // /                   /     /Description
+        v_CostSetDescription = ""               // /                   /     /Description
+        v_CostSetType        = ""               // /                   /     /Cost Set Type
+        v_CostMethod         = ""               // /                   /     /Costing Method
+        v_CostUpdate         = ""               // /                   /     /Cost Update
+        v_ThisLevelTotal     = ""               // /                   /     /This Level Total
+        v_LowerLevelTotal    = ""               // /                   /     /Lower Level Total
+        v_CostTotal          = ""               // /                   /     /Cost Total
+        v_DomainCode         = ""               // /Costs              /Costs/Domain
+        v_CostSet            = ""               // /                   /     /Cost Set
+        v_ItemCode           = ""               // /                   /     /Item Number
+        v_SiteCode           = ""               // /                   /     /Site
+        v_CostElement        = ""               // /                   /     /Element
+        v_CostCategory       = ""               // /                   /     /Category
+        v_ThisLevelCost      = ""               // /                   /     /This Level
+        v_LowerLevelCost     = ""               // /                   /     /Lower Level
+        v_TotalCost          = ""               // /                   /     /Total
+        v_IsPrimary          = ""               // /                   /     /Primary
+        v_IsAddOn            = ""               // /                   /     /Add On
+        data.push([v_DomainCode,v_CostSet,v_ItemCode,v_SiteCode,v_rowData,v_ItemDescription,v_UnitOfMeasure,v_SiteDescription,v_CostSetDescription,v_CostSetType,v_CostMethod,v_CostUpdate,v_ThisLevelTotal,v_LowerLevelTotal,v_CostTotal,v_DomainCode,v_CostSet,v_ItemCode,v_SiteCode,v_CostElement,v_CostCategory,v_ThisLevelCost,v_LowerLevelCost,v_TotalCost,v_IsPrimary,v_IsAddOn]);
+      }
+    }
+  };
+  
+  /*
+  https://docs.google.com/spreadsheets/d/11_J6_OzIPN-IcrhZmPaAPpfQLYHl3wK8iumsFqErVag/edit?gid=1594290546#gid=1594290546
+    var targetRange = sheet.getRange(2,112,data.length,26);
+  targetRange.setValues(data);
+  */
+  
+  var ts = SpreadsheetApp.openByUrl("https://docs.google.com/spreadsheets/d/11_J6_OzIPN-IcrhZmPaAPpfQLYHl3wK8iumsFqErVag/edit?gid=1594290546#gid=1594290546");
+  var tsheet = ts.getSheetByName("Data");
+  var targetRange = tsheet.getRange(7,1,data.length,26);
+  targetRange.setValues(data);
+
+  var fdata = [];
+  // populate the array with the formulas.
+  for (var i=0; i < data.length; i++)
+  {
+    fdata[i] = ['=IF(COUNTA(A' + (i+7).toString() + ':D' + (i+7).toString() + ',F' + (i+7).toString() + ':O' + (i+7).toString() + ')>0,"Item Site Cost",IF(COUNTA(P' + (i+7).toString() + ':Z' + (i+7).toString() + ')>0,"Costs",""))' ];
+  }
+  // set the column values.
+  tsheet.getRange(7,5,data.length,1).setFormulas(fdata);
+
+  
+
+
+
+
+ 
+
+
+  
 }
 
 
-/* == From visy board ================================*/
+/* == From visy board ==================================================================================================================================================================*/
 
 /* == Supplier Price List ============================ */
 function loadTemplatea() {

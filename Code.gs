@@ -24,7 +24,12 @@ function onOpen(e) {
   var ui = SpreadsheetApp.getUi();
   // Or DocumentApp or FormApp.
   ui.createMenu('DBW Menu')
-    .addItem('Create CIM Load File', 'createCIMload')
+    .addItem('Create Excel Load Files', 'createExcelLoad')
+    .addItem('Create CIM Load Files', 'createCIMload')
+    .addSeparator()
+    .addItem('Help and Support »', 'help')
+    .addSeparator()
+    .addItem('Authorise', 'init')
     .addToUi();
 
   var sheet = getOrCreateSheet_(CONFIG_SHEET);
